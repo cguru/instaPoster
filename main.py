@@ -22,6 +22,9 @@ from string import Template
 
 load_dotenv()
 
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+
 
 def main():
     st.set_page_config(page_title="instaPoster", page_icon=":dog:")
@@ -29,7 +32,16 @@ def main():
     connect_db()
 
     st.sidebar.title("Navigation")
-    choice = st.sidebar.radio("Go to", ("Login", "instaPoster", "Sign Up"))
+
+
+#    if 'user.uid' not in st.session_state or not st.session_state['user.uid']:
+    if st.session_state['logged_in']:
+        choice = st.sidebar.radio("Go to", ["instaPoster"])
+        st.sidebar.button("Logout", on_click=logout)
+        st.write("You are logged in.")
+    else:
+        choice = st.sidebar.radio("Go to", ["Login", "Sign Up"])
+        st.write("You are not logged in.")
 
     if choice == "Login":
         st.title("Login to Your Account")
@@ -104,8 +116,15 @@ def login_form():
                 st.session_state['user.uid'] = user['uid']
                 st.success("Logged in successfully!")
                 st.session_state['prompt.prompt'] = get_my_prompt()
+                st.session_state['logged_in'] = True
+
+                st.rerun()
             else:
                 st.error("Invalid email or password")
+
+def logout():
+    st.session_state['logged_in'] = False
+    st.rerun()
 
 def check_user(email, password):
     conn = None
@@ -152,7 +171,7 @@ def get_my_prompt():
 
 # 글작성 폼
 def insta_form():
-    st.header("instaPoster :dog:")
+    st.header(st.session_state['user.username'] + " :dog:")
 
     uploaded_file = st.file_uploader("Choose a file", key="insta_poster_uploader")
     if uploaded_file is not None:
@@ -170,7 +189,7 @@ def insta_form():
     else:
         current_prompt = st.session_state['prompt.prompt']
 
-    prompt = st.text_area("prompt", value=current_prompt, height=200)
+    prompt = st.text_area("prompt", value=current_prompt, height=400)
 
     col1, col2 = st.columns([3, 1])
 
@@ -205,6 +224,8 @@ def insta_form():
 
         response = image_to_story(b64image, converted_prompt)
         st.text_area("포스팅 내용", value=response, height=400)
+#    else:
+#        st.error("사진을 먼저 업로드 하세요~")
 
     if save_button:
         if save_prompt(prompt):
